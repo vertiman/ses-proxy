@@ -32,3 +32,5 @@ node_modules
 
 # Test credentials
 ses-credentials.json
+
+.idea/**
