@@ -52,7 +52,8 @@ SesSender.prototype = {
             RawMessage: {
                 Data: client.data
             },
-            Destinations: client.to
+            Destinations: client.to,
+            ConfigurationSetName: 'playground'
         };
 
         console.log('Attempting to send SES message');
