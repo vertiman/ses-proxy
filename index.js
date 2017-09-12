@@ -1,6 +1,8 @@
 const SesSender = require('./SesSender.js');
+const AddressChecker = require('./address-checker');
 const SMTPServer = require('smtp-server').SMTPServer;
 const getRawBody = require('raw-body');
+const fs = require('fs');
 
 const AWS = require('aws-sdk');
 
@@ -37,14 +39,17 @@ const startServer = port => {
 
 const sesSender = new SesSender();
 const onDataReceived = (stream, session, callback) => {
-    console.log('received email, yay');
-
-    getRawBody(stream).then(buffer => {
-        console.log('length ', buffer.length);
-        console.log(buffer.toString('ascii'));
-        const client = createClient(session.envelope.rcptTo.map(rcpt => rcpt.address), buffer);
-        sesSender.queue(client);
-        callback();
+    const recipients = [];
+    return Promise.all(session.envelope.rcptTo.map(rcptTo => {
+        return AddressChecker.validateEmailAddress(rcptTo.address).then(valid => {
+            if(valid) recipients.push(rcptTo.address);
+        });
+    })).then(() => {
+        getRawBody(stream).then(buffer => {
+            const client = createClient(recipients, buffer);
+            sesSender.queue(client);
+            callback();
+        });
     });
 };
 

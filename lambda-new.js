@@ -31,11 +31,11 @@ function handleBounce(message, time, context) {
 
     addresses.forEach(address => {
         const dynamoPayload = {
-            type: 'bounce',
+            message_type: 'bounce',
             rejectionType: bounceType,
             messageId,
             address,
-            time
+            email_time: time
         };
 
         dynamo.put({ Item: dynamoPayload }, function(err, data) {
@@ -58,11 +58,11 @@ function handleComplaint(message, time, context) {
 
     addresses.forEach(address => {
         const dynamoPayload = {
-            type: 'complaint',
+            message_type: 'complaint',
             rejectionType: complaintType,
             messageId,
             address,
-            time
+            email_time: time
         };
 
         dynamo.put({ Item: dynamoPayload }, function(err, data) {
@@ -86,10 +86,10 @@ function handleDelivery(message, time, context) {
 
     addresses.forEach(address => {
         const dynamoPayload = {
-            type: 'delivery_success',
+            message_type: 'delivery_success',
             address,
             messageId,
-            time,
+            email_time: time,
             deliveryTimestamp,
             subject
         };

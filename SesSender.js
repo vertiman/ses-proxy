@@ -1,7 +1,7 @@
 const fs = require('fs');
 const async = require('async');
 const path = require('path');
-const ses = new require('aws-sdk').SES();
+const AWS = require('aws-sdk');
 
 function SesSender() {
     this.messageQueue = async.queue(this.processClient.bind(this), 1);
@@ -17,7 +17,7 @@ SesSender.prototype = {
     },
 
     sendRaw: function(client, callback) {
-
+        const ses = new AWS.SES();
         const options = {
             RawMessage: {
                 Data: client.data
