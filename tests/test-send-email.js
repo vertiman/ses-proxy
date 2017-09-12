@@ -12,7 +12,7 @@ describe('Send Email', function() {
     });
     after(function(done) {
         //Wait a bit for the SES api call.
-        setTimeout(done, 15000);
+        setTimeout(done, 5000);
     });
 
     it('should bounce an email successfully', function(testsDone) {
@@ -20,8 +20,9 @@ describe('Send Email', function() {
         var transporter = nodemailer.createTransport(
             smtpTransport({
                 host: 'localhost',
-                port: 2525
-                // debug: true
+                port: 2525,
+                debug: true,
+                secure: false
             })
         );
 
@@ -33,7 +34,7 @@ describe('Send Email', function() {
         // setup e-mail data with unicode symbols
         var mailOptions = {
             from: process.env.FROM ? process.env.FROM : 'mike@resolver.com',
-            to: process.env.TO ? process.env.TO : 'bounce@simulator.amazonses.com',
+            to: process.env.TO ? process.env.TO : 'success@simulator.amazonses.com, bounce@simulator.amazonses.com, complaint@simulator.amazonses.com, suppressionlist@simulator.amazonses.com',
             subject: 'Hello ✔',
             text: 'Hello\nworld ✔',
             html: '<b>Hello<br>world ✔</b>'
@@ -41,10 +42,9 @@ describe('Send Email', function() {
 
         // send mail with defined transport object
         transporter.sendMail(mailOptions, function(error, info) {
-            should(error).not.be.ok;
-            should(info).be.ok;
+            should.exist(info);
+            should.not.exist(error);
             info.should.have.property('response');
-
             testsDone(error);
         });
     });
@@ -54,8 +54,8 @@ describe('Send Email', function() {
         var transporter = nodemailer.createTransport(
             smtpTransport({
                 host: 'localhost',
-                port: 2525
-                // debug: true
+                port: 2525,
+                debug: true
             })
         );
 

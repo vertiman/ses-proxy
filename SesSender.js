@@ -1,54 +1,24 @@
-var fs = require('fs'),
-    async = require('async'),
-    AWS = require('aws-sdk'),
-    proxyAgent = require('proxy-agent'),
-    path = require('path');
+const fs = require('fs');
+const async = require('async');
+const path = require('path');
+const ses = new require('aws-sdk').SES();
 
-function SesSender(opts) {
-    var credentialsFilePath = './ses-credentials.json';
-    if (opts.config) {
-        credentialsFilePath = opts.config;
-    }
-
-    if (fs.existsSync(credentialsFilePath)) {
-        AWS.config.loadFromPath(credentialsFilePath);
-    } else if (fs.existsSync(path.join(process.cwd(), credentialsFilePath))) {
-        AWS.config.loadFromPath(path.join(process.cwd(), credentialsFilePath));
-    } else {
-        console.warn('Warning: Can not find credentials file.')
-    }
-
-    var proxy = process.env.https_proxy;
-    proxy = opts.proxy ? opts.proxy : proxy;
-
-    if (proxy) {
-        console.log('Using https proxy', proxy);
-        AWS.config.update({
-            httpOptions: {
-                agent: proxyAgent(proxy, true)
-            }
-        });
-    }
-
+function SesSender() {
     this.messageQueue = async.queue(this.processClient.bind(this), 1);
-
 }
 
 SesSender.prototype = {
-
-    queue: function (client) {
+    queue: function(client) {
         this.messageQueue.push(client);
     },
 
-    processClient: function (client, callback) {
+    processClient: function(client, callback) {
         this.sendRaw(client, callback);
     },
 
-    sendRaw: function (client, callback) {
+    sendRaw: function(client, callback) {
 
-        var ses = new AWS.SES();
-
-        var options = {
+        const options = {
             RawMessage: {
                 Data: client.data
             },
@@ -57,7 +27,7 @@ SesSender.prototype = {
         };
 
         console.log('Attempting to send SES message');
-        ses.sendRawEmail(options, function (err, data) {
+        ses.sendRawEmail(options, function(err, data) {
             if (err) {
                 console.error('Error sending SES email', err);
                 console.error(err.stack);
@@ -68,6 +38,6 @@ SesSender.prototype = {
             callback();
         });
     }
-}
+};
 
 module.exports = SesSender;

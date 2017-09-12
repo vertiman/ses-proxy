@@ -6,9 +6,10 @@ const dynamo = new aws.DynamoDB.DocumentClient({ params: { TableName: 'SNSBlackl
 
 exports.handler = (event, context, callback) => {
     const message = JSON.parse(event.Records[0].Sns.Message);
-    const time = event.Records[0].Sns.Timestamp;
+    console.log('full message', JSON.stringify(message));
+    const time = Date.parse(event.Records[0].Sns.Timestamp);
 
-    switch(message.eventType) {
+    switch (message.eventType) {
         case 'Bounce':
             handleBounce(message, time, context);
             break;
@@ -25,16 +26,19 @@ exports.handler = (event, context, callback) => {
 
 function handleBounce(message, time, context) {
     const messageId = message.mail.messageId;
-    const addresses = message.bounce.bouncedRecipients.map((recipient) => stripBracketsOffEmailAddress(recipient.emailAddress));
+    const addresses = message.bounce.bouncedRecipients.map(recipient => recipient.emailAddress);
     const bounceType = message.bounce.bounceType;
 
     addresses.forEach(address => {
         const dynamoPayload = {
             type: 'bounce',
-            messageId, address, bounceType, time
+            rejectionType: bounceType,
+            messageId,
+            address,
+            time
         };
 
-        dynamo.put({Item : dynamoPayload}, function(err, data) {
+        dynamo.put({ Item: dynamoPayload }, function(err, data) {
             if (err) {
                 context.fail(err);
             } else {
@@ -49,20 +53,26 @@ function handleBounce(message, time, context) {
 
 function handleComplaint(message, time, context) {
     const messageId = message.mail.messageId;
-    const addresses = message.complaint.complainedRecipients.map((recipient) => recipient.emailAddress);
+    const addresses = message.complaint.complainedRecipients.map(recipient => recipient.emailAddress);
+    const complaintType = message.complaint.complaintFeedbackType;
 
-    const dynamoPayload = {
-        type: 'complaint',
-        messageId, addresses, time
-    };
+    addresses.forEach(address => {
+        const dynamoPayload = {
+            type: 'complaint',
+            rejectionType: complaintType,
+            messageId,
+            address,
+            time
+        };
 
-    dynamo.put({Item : dynamoPayload}, function(err, data) {
-        if (err) {
-            context.fail(err);
-        } else {
-            console.log(data);
-            context.succeed();
-        }
+        dynamo.put({ Item: dynamoPayload }, function(err, data) {
+            if (err) {
+                context.fail(err);
+            } else {
+                console.log(data);
+                context.succeed();
+            }
+        });
     });
 
     console.log(`A complaint was reported by ${addresses.join(', ')} for message ${messageId}.`);
@@ -71,25 +81,28 @@ function handleComplaint(message, time, context) {
 function handleDelivery(message, time, context) {
     const messageId = message.mail.messageId;
     const deliveryTimestamp = message.delivery.timestamp;
-    const addresses = message.mail.destination;
+    const addresses = message.delivery.recipients;
+    const subject = message.mail.commonHeaders.subject;
 
-    const dynamoPayload = {
-        type: 'complaint',
-        addresses, messageId, time, deliveryTimestamp
-    };
+    addresses.forEach(address => {
+        const dynamoPayload = {
+            type: 'delivery_success',
+            address,
+            messageId,
+            time,
+            deliveryTimestamp,
+            subject
+        };
 
-    dynamo.put({Item : dynamoPayload}, function(err, data) {
-        if (err) {
-            context.fail(err);
-        } else {
-            console.log(data);
-            context.succeed();
-        }
+        dynamo.put({ Item: dynamoPayload }, function(err, data) {
+            if (err) {
+                context.fail(err);
+            } else {
+                console.log(data);
+                context.succeed();
+            }
+        });
     });
 
     console.log(`Message ${messageId} was delivered successfully at ${deliveryTimestamp}.`);
 }
-
-const stripBracketsOffEmailAddress = function (emailAddress) {
-    return emailAddress.substring(1, emailAddress.length -1);
-};
